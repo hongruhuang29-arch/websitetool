@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動網站元素與功能展示 (駭客任務版) | 作者：紅焰教學</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #000000; /* 基底純黑 */
+            margin: 0;
+            overflow-x: hidden;
+            /* 保持預設游標，特效為疊加 */
+            cursor: default;
+        }
+
+        /* --- Canvas 層級設定 --- */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            display: block;
+            pointer-events: none;
+        }
+        
+        /* --- 內容層級設定 --- */
+        header, main, footer, #lightbox {
+            position: relative;
+            z-index: 10; 
+        }
+
+        h1, h2, .category-title {
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 卡片樣式 */
+        .element-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(2px);
+        }
+        .element-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 255, 0, 0.2);
+        }
+        .card-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #000000;
+        }
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+        }
+        .example-container {
+            min-height: 180px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow: hidden;
+            position: relative;
+        }
+        .category-title {
+            border-left: 5px solid #00FF00;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        /* General Examples */
+        .hover-btn { background-color: #3b82f6; color: white; padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; cursor: pointer; }
+        .hover-btn:hover { background-color: #2563eb; transform: scale(1.1); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+        .parallax-bg { background-image: url('https://placehold.co/800x400/a0aec0/ffffff?text=背景層'); min-height: 200px; background-attachment: fixed; background-position: center; background-repeat: no-repeat; background-size: cover; position: relative; display: flex; justify-content: center; align-items: center; }
+        .parallax-content { background-color: rgba(255,255,255,0.8); padding: 20px; border-radius: 8px; color: #1f2937; }
+        #typing-effect { color: #000000; }
+        #typing-effect::after { content: '|'; animation: blink 0.7s infinite; color: #000000; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .toggle-switch input { display: none; }
+        .toggle-switch label { cursor: pointer; width: 60px; height: 30px; background: #d1d5db; display: block; border-radius: 30px; position: relative; }
+        .toggle-switch label:after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-switch input:checked + label { background: #3b82f6; }
+        .toggle-switch input:checked + label:after { left: calc(100% - 3px); transform: translateX(-100%); }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background-color: rgba(255,255,255,0.3); }
+        
+        #wheel { 
+            width: 150px; 
+            height: 150px; 
+            border-radius: 50%; 
+            background-image: conic-gradient(#ef4444 0 60deg, #f97316 60deg 120deg, #eab308 120deg 180deg, #22c55e 180deg 240deg, #3b82f6 240deg 300deg, #8b5cf6 300deg 360deg); 
+            position: relative; 
+            transition: transform 4s ease-out; 
+        }
+        
+        .like-button { font-size: 2rem; cursor: pointer; transition: transform 0.2s ease, color 0.2s ease; color: #d1d5db; }
+        .like-button.liked { transform: scale(1.3); color: #ef4444; }
+        #progress-bar-container { width: 80%; background-color: #e5e7eb; border-radius: 999px; }
+        #progress-bar { width: 0%; height: 20px; background-color: #3b82f6; border-radius: 999px; transition: width 0.5s ease-in-out; }
+        #lightbox { display: none; position: fixed; z-index: 1000; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+        #lightbox-img { max-width: 90%; max-height: 80%; }
+        .tooltip-container { position: relative; }
+        .tooltip-text { visibility: hidden; width: 140px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -70px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+        .timeline { position: relative; max-width: 100%; margin: 0 auto; color: #1f2937; }
+        .timeline::after { content: ''; position: absolute; width: 3px; background-color: #d1d5db; top: 0; bottom: 0; left: 15px; }
+        .timeline-item { padding: 10px 40px; position: relative; background-color: inherit; width: 100%; }
+        .timeline-item::before { content: ''; position: absolute; width: 20px; height: 20px; right: auto; left: 6px; background-color: white; border: 4px solid #3b82f6; top: 15px; border-radius: 50%; z-index: 1; }
+        .chatbot-window { width: 100%; height: 150px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; padding: 8px; }
+        .chatbot-msg { background: #e5e7eb; padding: 6px 10px; border-radius: 12px; margin-bottom: 4px; max-width: 70%; font-size: 0.8rem; color: #1f2937; }
+        .chatbot-msg.user { background: #3b82f6; color: white; align-self: flex-end; }
+        .emoji-reaction { font-size: 2.5rem; cursor: pointer; transition: transform 0.2s ease; }
+        .emoji-reaction:hover { transform: scale(1.3); }
+        .reaction-bar { background-color: white; padding: 8px; border-radius: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 12px; }
+        .reaction-icon { font-size: 1.8rem; cursor: pointer; transition: transform 0.2s ease; opacity: 0.7; }
+        .reaction-icon:hover { transform: scale(1.4) translateY(-4px); opacity: 1; }
+
+        /* --- [新增] 星光游標特效 CSS --- */
+        .cursor-star {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 220, 1); /* 亮白微黃 */
+            border-radius: 50%;
+            pointer-events: none; /* 讓滑鼠點擊穿透，不影響互動 */
+            z-index: 9999; /* 浮在最上層 */
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+            transform: translate(-50%, -50%); /* 置中 */
+            animation: fadeOut 0.8s forwards; /* 播放消失動畫 */
+        }
+
+        @keyframes fadeOut {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.2);
+                opacity: 0;
+            }
+        }
+
+        /* --- [新增] 音樂波紋動畫 CSS --- */
+        .music-visualizer {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 30px;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .music-bar {
+            width: 6px;
+            height: 5px;
+            background-color: #3b82f6; /* 藍色 */
+            border-radius: 99px;
+            animation: sound 0ms -800ms linear infinite alternate;
+            animation-play-state: paused; /* 預設暫停 */
+        }
+        /* 定義音波跳動關鍵影格 */
+        @keyframes sound {
+            0% { height: 5px; opacity: .5; }
+            100% { height: 25px; opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-gray-300">
+    <!-- Matrix Canvas (背景特效) -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- 燈箱 (Lightbox) -->
+    <div id="lightbox">
+        <span class="absolute top-4 right-6 text-white text-4xl cursor-pointer" onclick="closeLightbox()">&times;</span>
+        <img id="lightbox-img" src="">
+    </div>
+
+    <!-- Header -->
+    <header class="bg-black/80 shadow-md p-6 sticky top-0 backdrop-blur-md border-b border-green-900">
+        <div class="container mx-auto text-center">
+            <h1 class="text-3xl font-bold text-green-500 tracking-wider" style="font-family: monospace;">互動網站元素與功能展示</h1>
+            <p class="text-green-700 mt-1 font-mono text-sm">作者：紅焰教學 | System Status: Online</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <!-- 視覺互動與動態效果 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">視覺互動與動態效果</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">動畫過場</h3><p class="card-subtitle">Transition Animation</p><p class="text-gray-600">在不同狀態或頁面切換間加入動畫，提升視覺流暢感與使用者體驗。</p></div><div class="example-container"><p class="text-gray-500">（本頁面的卡片出現與懸停效果即是範例）</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">滑鼠懸停效果</h3><p class="card-subtitle">Hover Effect</p><p class="text-gray-600">提供互動回饋、提示功能，增加使用者的操作感知。</p></div><div class="example-container"><button class="hover-btn">將滑鼠移到我身上</button></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">滾動視差</h3><p class="card-subtitle">Parallax Scrolling</p><p class="text-gray-600">創造景深與立體視覺效果，讓頁面滾動更有趣。</p></div><div class="example-container p-0"><div class="w-full h-full parallax-bg"><h4 class="text-xl font-bold parallax-content">滾動頁面看看</h4></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">背景特效</h3><p class="card-subtitle">Background Effect</p><p class="text-gray-600">透過 Canvas 繪製動態背景，目前展示的是經典「數位雨」。</p></div><div class="example-container"><p class="text-center text-gray-500">（本頁面的背景即是範例）</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">SVG 動畫</h3><p class="card-subtitle">SVG Animation</p><p class="text-gray-600">使用可縮放向量圖形(SVG)製作動畫，優點是清晰不失真且檔案小。</p></div><div class="example-container"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24"><path fill="#3b82f6" d="M12 2L9.18 8.59L2 9.27l5.5 5.07L6.18 22L12 18.27L17.82 22l-1.32-7.66L22 9.27l-7.18-.68z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="5s" repeatCount="indefinite"/></path></svg></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">打字機效果</h3><p class="card-subtitle">Typing Effect</p><p class="text-gray-600">模擬逐字輸入文字的動感，常用於標語或引導。</p></div><div class="example-container"><p id="typing-effect" class="text-lg font-mono"></p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">微互動</h3><p class="card-subtitle">Micro-interaction</p><p class="text-gray-600">在使用者完成一個小動作時，給予一個細微且愉悅的視覺或聽覺回饋。</p></div><div class="example-container"><i id="like-btn" class="like-button fa-regular fa-heart"></i></div></div>
+            </div>
+        </section>
+
+        <!-- 操作互動與控制介面 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">操作互動與控制介面</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">拖放功能</h3><p class="card-subtitle">Drag & Drop</p><p class="text-gray-600">讓使用者可直觀地操作、重組內容。</p></div><div class="example-container gap-4"><div id="drop-zone" class="w-32 h-32 border-2 border-dashed border-gray-400 rounded-lg flex justify-center items-center text-gray-500 text-center">放置區</div><div id="drag-item" draggable="true" class="w-24 h-24 bg-blue-500 rounded-lg cursor-move flex justify-center items-center text-white font-bold">拖曳我</div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">滑桿</h3><p class="card-subtitle">Slider</p><p class="text-gray-600">用於控制數值或範圍，如音量、亮度等。</p></div><div class="example-container flex-col w-full px-8"><input type="range" id="slider" min="0" max="100" value="50" class="w-full"><p class="mt-4 text-lg text-gray-800">目前數值: <span id="slider-value" class="font-bold text-blue-600">50</span></p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">開關</h3><p class="card-subtitle">Toggle Switch</p><p class="text-gray-600">用於開啟或關閉功能設定，如明暗模式切換。</p></div><div id="toggle-bg" class="example-container flex-col transition-colors duration-300"><div class="toggle-switch"><input type="checkbox" id="theme-toggle"><label for="theme-toggle"></label></div><p id="toggle-text" class="mt-4 font-semibold text-gray-800">日間模式</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">滑動手勢</h3><p class="card-subtitle">Swipe Gestures</p><p class="text-gray-600">在行動裝置上，透過左右或上下滑動來切換頁面或內容。</p></div><div class="example-container"><p class="text-center text-gray-500"><i class="fa-solid fa-mobile-screen-button text-4xl mb-2"></i><br/>請在觸控螢幕上體驗</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">進度條</h3><p class="card-subtitle">Progress Bar</p><p class="text-gray-600">顯示任務或載入的進度，給予使用者明確的等待預期。</p></div><div class="example-container flex-col w-full px-8"><div id="progress-bar-container"><div id="progress-bar"></div></div><button id="progress-btn" class="hover-btn mt-4">開始</button></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">即時搜尋建議</h3><p class="card-subtitle">Autocomplete</p><p class="text-gray-600">在使用者輸入時提供相關建議，提升搜尋效率與體驗。</p></div><div class="example-container"><p class="text-center text-gray-500">在搜尋框輸入文字時，<br/>下方會自動跳出相關詞彙。<br/>（需後端資料庫支持）</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">多步驟導引</h3><p class="card-subtitle">Step Wizard</p><p class="text-gray-600">將註冊、結帳等複雜流程分步完成，降低使用者的心理負擔。</p></div><div class="example-container"><p class="text-center text-gray-500">常見於表單填寫，<br/>如：步驟1 ->步驟2 -> 完成。</p></div></div>
+            </div>
+        </section>
+        
+        <!-- 內容呈現形式 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">內容呈現形式</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">卡片式設計</h3><p class="card-subtitle">Card Layout</p><p class="text-gray-600">將資訊模組化，以卡片形式呈現，版面清晰且利於響應式設計。</p></div><div class="example-container"><p class="text-gray-500">（本頁面即採用卡片式設計）</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">手風琴選單</h3><p class="card-subtitle">Accordion</p><p class="text-gray-600">有效收納大量資訊，點擊後展開顯示，常用於FAQ。</p></div><div class="example-container flex-col items-start w-full p-4"><div class="w-full"><button class="accordion-header w-full text-left p-4 bg-gray-200 hover:bg-gray-300 rounded-t-lg flex justify-between items-center text-gray-800"><span>問題一：手風琴選單的用途？</span><span class="accordion-icon">&#9654;</span></button><div class="accordion-content bg-white border border-t-0 border-gray-200 rounded-b-lg"><div class="p-4"><p class="text-gray-800">這是一段詳細的答案內容。手風琴選單的主要目的，就是將這樣的大段落文字預設隱藏起來，讓頁面保持整潔。使用者只有在對這個特定問題感興趣時，才需要點擊標題來展開閱讀。<br><br>這種方式非常適合用於常見問題解答（FAQ）、產品規格說明，或是任何需要將大量資訊分門別類，但又不希望一次全部顯示在畫面上的情境。<br><br>例如，您現在看到的這段文字，就是被收納在答案區塊中，點擊後才會展開，這便是最直接的範例。</p></div></div></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">分頁標籤</h3><p class="card-subtitle">Tabs</p><p class="text-gray-600">將相關內容分組，一次只顯示一組，讓資訊更有條理。</p></div><div class="example-container flex-col w-full p-4"><div class="w-full"><div class="border-b border-gray-200"><nav class="-mb-px flex space-x-4"><button class="tab-btn active-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-blue-600 border-blue-600">產品A</button><button class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">產品B</button></nav></div><div class="mt-4 text-gray-800"><div class="tab-content"><p>這裡是<strong>產品A</strong>的詳細內容。</p></div><div class="tab-content hidden"><p>這裡是<strong>產品B</strong>的詳細內容。</p></div></div></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">燈箱效果</h3><p class="card-subtitle">Lightbox</p><p class="text-gray-600">點擊縮圖後，在當前頁面彈出一個覆蓋層來放大顯示圖片或影片。</p></div><div class="example-container"><img src="https://placehold.co/150x100/3b82f6/ffffff?text=點擊放大" class="cursor-pointer rounded-lg shadow-md" onclick="openLightbox(this.src)"></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">Tooltip 提示框</h3><p class="card-subtitle">Tooltip</p><p class="text-gray-600">當滑鼠移至某個元素上時，顯示一個小提示框提供額外說明。</p></div><div class="example-container"><div class="tooltip-container"><i class="fa-solid fa-circle-info text-3xl text-gray-400"></i><span class="tooltip-text">這是一個提示訊息！</span></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">動態統計數字</h3><p class="card-subtitle">Animated Counters</p><p class="text-gray-600">用動態數字強調數據，增加成就感與視覺吸引力。</p></div><div class="example-container gap-8"><div class="text-center"><p class="text-4xl font-bold text-blue-600 counter" data-target="1234">0</p><p class="text-gray-500">訪客數</p></div><div class="text-center"><p class="text-4xl font-bold text-green-600 counter" data-target="567">0</p><p class="text-gray-500">任務完成</p></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">時間軸</h3><p class="card-subtitle">Timeline</p><p class="text-gray-600">以垂直或水平方式，按時間順序呈現事件、歷史或專案進程。</p></div><div class="example-container w-full p-4 text-sm"><div class="timeline"><div class="timeline-item"><p class="font-bold">步驟一</p><p>完成初始設定。</p></div><div class="timeline-item"><p class="font-bold">步驟二</p><p>上傳所需文件。</p></div></div></div></div>
+            </div>
+        </section>
+
+        <!-- 感官強化與氛圍營造 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">感官強化與氛圍營造</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">背景音樂</h3><p class="card-subtitle">Background Music</p><p class="text-gray-600">為網站加入背景音樂，增加氛圍與沉浸感，常用於展覽或遊戲網站。</p></div><div class="example-container flex-col"><p class="text-gray-500 text-center text-sm mb-2">（請點擊下方播放鍵）</p>
+                <!-- 音波動畫容器 -->
+                <div class="music-visualizer" id="music-bars">
+                    <span class="music-bar" style="animation-duration: 474ms;"></span>
+                    <span class="music-bar" style="animation-duration: 433ms;"></span>
+                    <span class="music-bar" style="animation-duration: 407ms;"></span>
+                    <span class="music-bar" style="animation-duration: 458ms;"></span>
+                    <span class="music-bar" style="animation-duration: 400ms;"></span>
+                </div>
+                <!-- 修改為新的 CDN 音樂連結 -->
+                <audio id="bg-music" controls loop class="mt-2 w-full">
+                    <source src="https://cdn.jsdelivr.net/gh/hongruhuang29-arch/music-mp3@main/%E6%B7%BA%E5%B1%B1%E7%9A%84%E6%9C%80%E5%BE%8C%E4%B8%80%E9%81%93%E5%85%89%20(2).mp3" type="audio/mp3">
+                    您的瀏覽器不支援 audio 元素。
+                </audio>
+                </div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">音效回饋</h3><p class="card-subtitle">Audio Feedback</p><p class="text-gray-600">在使用者點擊按鈕、完成任務時提供聲音反饋，增強互動感。</p></div><div class="example-container"><button class="hover-btn" onclick="playClickSound()">點我聽音效</button></div></div>
+                <!-- 移除：環境音效 卡片 -->
+                <div class="element-card"><div class="card-content"><h3 class="card-title">震動回饋</h3><p class="card-subtitle">Haptic Feedback</p><p class="text-gray-600">在行動裝置上，於關鍵操作（如確認、錯誤）時提供震動提示。</p></div><div class="example-container"><button class="hover-btn" onclick="triggerVibration()">點我震動</button></div></div>
+            </div>
+        </section>
+
+        <!-- 情緒與互動元素 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">情緒與互動元素</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">Emoji 表情互動</h3><p class="card-subtitle">Emoji Interaction</p><p class="text-gray-600">提供表情符號讓使用者表達情感，提升互動的趣味性與溫度。</p></div><div class="example-container gap-6"><span class="emoji-reaction">👍</span><span class="emoji-reaction">❤️</span><span class="emoji-reaction">😂</span><span class="emoji-reaction">😮</span></div></div>
+                <!-- 移除：虛擬角色 卡片 -->
+                <div class="element-card"><div class="card-content"><h3 class="card-title">情緒回饋系統</h3><p class="card-subtitle">Reaction System</p><p class="text-gray-600">讓使用者對內容進行快速的情感反應，如按讚、愛心、驚訝等。</p></div><div class="example-container"><div class="reaction-bar"><span class="reaction-icon">👍</span><span class="reaction-icon">❤️</span><span class="reaction-icon">😂</span><span class="reaction-icon">😮</span><span class="reaction-icon">😢</span></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">GIF 動畫表情</h3><p class="card-subtitle">GIF Animation</p><p class="text-gray-600">使用動態 GIF 圖片增加趣味性與動態回饋，常用於任務完成等場景。</p></div><div class="example-container"><img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmZyZzU0cW11NnVpM2Z1cTFmdThob2dpcjN2MHJoZ25ubzVhdnp1eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oz8xAFtqoGgAbYAI8/giphy.gif" alt="Success GIF" class="h-24 rounded-lg"/></div></div>
+            </div>
+        </section>
+
+        <!-- 智慧與互動機制 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">智慧與互動機制</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">聊天機器人</h3><p class="card-subtitle">Chatbot</p><p class="text-gray-600">提供即時問答、導覽與客服支援，提升使用者體驗與效率。</p></div><div class="example-container p-2"><div class="chatbot-window"><div class="chatbot-msg">您好，有什麼可以幫助您的嗎？</div><div class="chatbot-msg user">我想了解課程資訊。</div></div></div></div>
+                <!-- 移除：AI 推薦系統 卡片 -->
+                <div class="element-card"><div class="card-content"><h3 class="card-title">語音互動</h3><p class="card-subtitle">Voice Interaction</p><p class="text-gray-600">支援使用者透過語音輸入或下達指令，實現更自然的互動方式。</p></div><div class="example-container"><p class="text-center text-gray-500"><i class="fa-solid fa-microphone-lines text-4xl text-gray-400 mb-2"></i><br/>常用於語音搜尋功能</p></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">自適應介面</h3><p class="card-subtitle">Responsive UI</p><p class="text-gray-600">介面能自動適應手機、平板、電腦等不同裝置的螢幕尺寸。</p></div><div class="example-container"><p class="text-center text-gray-500">請縮放您的瀏覽器視窗，<br/>感受版面的變化。</p></div></div>
+             </div>
+        </section>
+        
+        <!-- 遊戲化互動 -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold category-title">遊戲化互動</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="element-card"><div class="card-content"><h3 class="card-title">積分系統</h3><p class="card-subtitle">Point System</p><p class="text-gray-600">透過完成任務或學習來獲得積分，鼓勵使用者持續參與。</p></div><div class="example-container flex-col"><p class="text-2xl text-gray-800">您的積分: <span id="points" class="font-bold text-yellow-500">0</span></p><button class="hover-btn mt-4" onclick="addPoints(10)">完成任務 (+10分)</button></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">徽章獎勵</h3><p class="card-subtitle">Badges / Achievements</p><p class="text-gray-600">在使用者達成特定成就時授予徽章，提供視覺化的榮譽激勵。</p></div><div class="example-container text-yellow-400 text-5xl gap-6"><i class="fa-solid fa-shield-halved" title="新手上路"></i><i class="fa-solid fa-star" title="學習之星"></i><i class="fa-solid fa-trophy" title="挑戰冠軍"></i></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">排行榜</h3><p class="card-subtitle">Leaderboard</p><p class="text-gray-600">建立良性競爭氛圍與社群歸屬感，激發使用者追求卓越的動力。</p></div><div class="example-container p-4 w-full"><ul class="w-full text-center text-gray-800"><li class="p-1 bg-yellow-200 rounded">1. 王小明 - 500分</li><li class="p-1 bg-gray-100 rounded mt-1">2. 陳大華 - 450分</li><li class="p-1 bg-gray-100 rounded mt-1">3. 林美麗 - 420分</li></ul></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">任務挑戰</h3><p class="card-subtitle">Quest / Mission</p><p class="text-gray-600">設定具體任務引導使用者進行目標導向的互動，提升參與感。</p></div><div class="example-container p-4 w-full text-left"><div class="bg-white p-3 rounded-lg shadow w-full text-gray-800"><p class="font-bold mb-2">每日任務</p><label class="flex items-center"><input type="checkbox" class="mr-2">完成一篇閱讀</label><label class="flex items-center mt-1"><input type="checkbox" class="mr-2">簽到</label></div></div></div>
+                <div class="element-card"><div class="card-content"><h3 class="card-title">轉盤抽獎</h3><p class="card-subtitle">Lucky Wheel</p><p class="text-gray-600">增加趣味性與驚喜感，常用於活動或學習獎勵。</p></div><div class="example-container flex-col">
+                    <!-- 修正：將轉盤與指針分離 -->
+                    <div style="position: relative;">
+                        <div id="wheel"></div>
+                        <!-- 靜態指針 (Absolute Position) -->
+                        <div style="
+                            position: absolute;
+                            top: -10px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 0;
+                            height: 0;
+                            border-left: 10px solid transparent;
+                            border-right: 10px solid transparent;
+                            border-top: 15px solid #ccc;
+                            z-index: 20;
+                        "></div>
+                    </div>
+                    <button id="spin-btn" class="mt-6 bg-yellow-500 text-white font-bold py-2 px-6 rounded-full hover:bg-yellow-600 transition">開始抽獎</button>
+                </div></div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center p-6 bg-white/90 border-t mt-8 relative z-10">
+        <p class="text-gray-600">&copy; 2025 紅焰教學. All Rights Reserved.</p>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    /* -----------------------------------------------------
+     * [新增] Cursor Star Trail Effect (星光游標特效)
+     * ----------------------------------------------------- */
+    document.addEventListener('mousemove', function(e) {
+        const star = document.createElement('div');
+        star.classList.add('cursor-star');
+        
+        star.style.left = e.pageX + 'px';
+        star.style.top = e.pageY + 'px';
+        
+        document.body.appendChild(star);
+        
+        setTimeout(() => {
+            star.remove();
+        }, 800);
+    });
+
+    /* -----------------------------------------------------
+     * Matrix Digital Rain Effect (駭客任務數位雨)
+     * ----------------------------------------------------- */
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const resizeCanvas = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+
+    // 經典駭客任務字元集
+    const katakana = '三 下 上 丈 丸 凡 久 也 乞 于 亡 口 土 士 夕 大 女 子 寸 小 山 川 工 己 已 巳 干 弓 才 之 亢 几 凡 刃 勺 叉';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const alphabet = katakana + latin + nums; // 修正錯誤：將 zh 改為 katakana
+
+    const fontSize = 16;
+    let columns = Math.floor(canvas.width / fontSize);
+
+    let drops = [];
+    const initDrops = () => {
+        columns = Math.floor(canvas.width / fontSize);
+        drops = [];
+        for(let i = 0; i < columns; i++) {
+            drops[i] = Math.random() * -80; 
+        }
+    };
+    initDrops();
+
+    const drawMatrix = () => {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#0F0';
+        ctx.font = fontSize + 'px monospace';
+
+        for(let i = 0; i < drops.length; i++) {
+            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    };
+
+    setInterval(drawMatrix, 30);
+
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        initDrops();
+    });
+
+    /* -----------------------------------------------------
+     * Background Music Animation Control
+     * ----------------------------------------------------- */
+    const bgMusic = document.getElementById('bg-music');
+    const musicBars = document.querySelectorAll('.music-bar');
+    
+    if (bgMusic) {
+        // 當音樂播放時，啟動動畫
+        bgMusic.addEventListener('play', () => {
+            musicBars.forEach(bar => {
+                bar.style.animationPlayState = 'running';
+            });
+        });
+
+        // 當音樂暫停或結束時，暫停動畫
+        bgMusic.addEventListener('pause', () => {
+            musicBars.forEach(bar => {
+                bar.style.animationPlayState = 'paused';
+            });
+        });
+        
+        bgMusic.addEventListener('ended', () => {
+            musicBars.forEach(bar => {
+                bar.style.animationPlayState = 'paused';
+            });
+        });
+    }
+
+
+    /* -----------------------------------------------------
+     * Original Functional Code
+     * ----------------------------------------------------- */
+    const cards = document.querySelectorAll('.element-card');
+    const pastelColors = [
+        '#FFF0F5', '#F0FFF0', '#FFFACD', '#FFE4E1', '#FAFAD2', '#E6E6FA', '#FFDAB9'
+    ];
+    cards.forEach((card, index) => {
+        card.style.backgroundColor = pastelColors[index % pastelColors.length];
+    });
+
+    // Typing Effect
+    const typingElement = document.getElementById('typing-effect');
+    if(typingElement) {
+        const text = "歡迎來到互動網站展示！";
+        let index = 0;
+        function type() {
+            if (index < text.length) {
+                typingElement.textContent += text.charAt(index);
+                index++;
+                setTimeout(type, 100);
+            } else {
+                setTimeout(() => { typingElement.textContent = ''; index = 0; type(); }, 3000);
+            }
+        }
+        type();
+    }
+    
+    const likeBtn = document.getElementById('like-btn');
+    if(likeBtn) {
+        likeBtn.addEventListener('click', () => {
+            likeBtn.classList.toggle('liked');
+            likeBtn.classList.toggle('fa-regular');
+            likeBtn.classList.toggle('fa-solid');
+        });
+    }
+
+    const dragItem = document.getElementById('drag-item');
+    const dropZone = document.getElementById('drop-zone');
+    if(dragItem && dropZone) {
+        dragItem.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', e.target.id); setTimeout(() => { e.target.style.display = 'none'; }, 0); });
+        dragItem.addEventListener('dragend', (e) => { e.target.style.display = 'flex'; });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('bg-blue-100', 'border-blue-400'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('bg-blue-100', 'border-blue-400'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-blue-100', 'border-blue-400');
+            if (dropZone.contains(dragItem)) return;
+            const id = e.dataTransfer.getData('text');
+            const draggableElement = document.getElementById(id);
+            dropZone.innerHTML = '';
+            dropZone.appendChild(draggableElement);
+        });
+    }
+
+    const slider = document.getElementById('slider');
+    const sliderValue = document.getElementById('slider-value');
+    if(slider && sliderValue) { slider.addEventListener('input', (e) => { sliderValue.textContent = e.target.value; }); }
+
+    const themeToggle = document.getElementById('theme-toggle');
+    const toggleBg = document.getElementById('toggle-bg');
+    const toggleText = document.getElementById('toggle-text');
+    if(themeToggle && toggleBg && toggleText) {
+        themeToggle.addEventListener('change', () => {
+            if (themeToggle.checked) {
+                toggleBg.style.backgroundColor = '#1f2937';
+                toggleText.textContent = '夜間模式';
+                toggleText.style.color = '#f9fafb';
+            } else {
+                toggleBg.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+                toggleText.textContent = '日間模式';
+                toggleText.style.color = '#1f2937';
+            }
+        });
+    }
+    
+    const progressBtn = document.getElementById('progress-btn');
+    const progressBar = document.getElementById('progress-bar');
+    if(progressBtn && progressBar) {
+        progressBtn.addEventListener('click', () => {
+            progressBar.style.width = '0%';
+            setTimeout(() => { progressBar.style.width = '100%'; }, 100);
+        });
+    }
+
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.accordion-icon');
+            header.classList.toggle('active');
+            if (content.style.maxHeight) { 
+                content.style.maxHeight = null; 
+                if(icon) icon.innerHTML = '&#9654;'; 
+            } 
+            else { 
+                content.style.maxHeight = content.scrollHeight + 'px'; 
+                if(icon) icon.innerHTML = '&#9660;'; 
+            }
+        });
+    });
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    if (tabBtns.length > 0 && tabContents.length > 0) {
+        tabBtns.forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => {
+                    b.classList.remove('active-tab', 'text-blue-600', 'border-blue-600');
+                    b.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                });
+                btn.classList.add('active-tab', 'text-blue-600', 'border-blue-600');
+                btn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                tabContents.forEach((content) => {
+                    content.classList.add('hidden');
+                });
+                if(tabContents[index]) {
+                    tabContents[index].classList.remove('hidden');
+                }
+            });
+        });
+    }
+    
+    const counters = document.querySelectorAll('.counter');
+    const animateCounter = (counter) => {
+        const target = +counter.getAttribute('data-target');
+        const updateCount = () => {
+            const count = +counter.innerText;
+            const inc = target / 200;
+            if (count < target) {
+                counter.innerText = Math.ceil(count + inc);
+                setTimeout(updateCount, 1);
+            } else {
+                counter.innerText = target;
+            }
+        };
+        updateCount();
+    };
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounter(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+    counters.forEach(counter => observer.observe(counter));
+
+    const wheel = document.getElementById('wheel');
+    const spinBtn = document.getElementById('spin-btn');
+    if (wheel && spinBtn) {
+        let rotation = 0;
+        spinBtn.addEventListener('click', () => {
+            rotation += Math.floor(Math.random() * 360) + 360 * 5; 
+            wheel.style.transform = `rotate(${rotation}deg)`;
+        });
+    }
+
+    window.addPoints = (amount) => {
+        const pointsEl = document.getElementById('points');
+        let currentPoints = parseInt(pointsEl.innerText);
+        pointsEl.innerText = currentPoints + amount;
+    };
+});
+
+function openLightbox(src) {
+    document.getElementById('lightbox-img').src = src.replace('150x100', '800x600');
+    document.getElementById('lightbox').style.display = 'flex';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+// -----------------------------------------------------
+// [修改] 音效回饋：Do Mi So (C Major Chord)
+// 使用 Web Audio API 即時合成音效，無需外部檔案
+// -----------------------------------------------------
+function playClickSound() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+
+    const playNote = (freq, time) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        gain.gain.setValueAtTime(0.1, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+        osc.start(time);
+        osc.stop(time + 0.5);
+    };
+
+    playNote(523.25, now);       // Do
+    playNote(659.25, now + 0.1); // Mi
+    playNote(783.99, now + 0.2); // So
+}
+
+function triggerVibration() {
+    if ('vibrate' in navigator) {
+        navigator.vibrate(200); 
+    } else {
+        alert('您的裝置不支援震動功能。');
+    }
+}
+</script>
+
+</body>
+</html>
