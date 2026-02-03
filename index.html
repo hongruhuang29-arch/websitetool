@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動網站元素與功能展示 (駭客任務版) | 作者：紅焰教學</title>
+    <title>互動網站元素與功能展示 | 作者：紅焰教學</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -180,6 +182,14 @@
             0% { height: 5px; opacity: .5; }
             100% { height: 25px; opacity: 1; }
         }
+
+        /* Three.js 容器樣式 */
+        #three-container {
+            width: 100%;
+            height: 100%;
+            min-height: 180px; /* 確保有最小高度 */
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="text-gray-300">
@@ -206,6 +216,9 @@
         <section class="mb-12">
             <h2 class="text-2xl font-bold category-title">視覺互動與動態效果</h2>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- 新增：3D 模型展示 -->
+                <div class="element-card"><div class="card-content"><h3 class="card-title">3D 模型展示</h3><p class="card-subtitle">Three.js Model</p><p class="text-gray-600">使用 WebGL 技術在瀏覽器中渲染 3D 物件，可即時運算與互動。</p></div><div class="example-container p-0"><div id="three-container"></div></div></div>
+                
                 <div class="element-card"><div class="card-content"><h3 class="card-title">動畫過場</h3><p class="card-subtitle">Transition Animation</p><p class="text-gray-600">在不同狀態或頁面切換間加入動畫，提升視覺流暢感與使用者體驗。</p></div><div class="example-container"><p class="text-gray-500">（本頁面的卡片出現與懸停效果即是範例）</p></div></div>
                 <div class="element-card"><div class="card-content"><h3 class="card-title">滑鼠懸停效果</h3><p class="card-subtitle">Hover Effect</p><p class="text-gray-600">提供互動回饋、提示功能，增加使用者的操作感知。</p></div><div class="example-container"><button class="hover-btn">將滑鼠移到我身上</button></div></div>
                 <div class="element-card"><div class="card-content"><h3 class="card-title">滾動視差</h3><p class="card-subtitle">Parallax Scrolling</p><p class="text-gray-600">創造景深與立體視覺效果，讓頁面滾動更有趣。</p></div><div class="example-container p-0"><div class="w-full h-full parallax-bg"><h4 class="text-xl font-bold parallax-content">滾動頁面看看</h4></div></div></div>
@@ -332,6 +345,55 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     /* -----------------------------------------------------
+     * [新增] Three.js 3D 模型初始化
+     * ----------------------------------------------------- */
+    const initThreeJS = () => {
+        const container = document.getElementById('three-container');
+        if (!container) return;
+
+        // 場景與相機
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        
+        // 渲染器 (alpha: true 讓背景透明)
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // 幾何體：二十面體 (Icosahedron) + 線框 (Wireframe)
+        const geometry = new THREE.IcosahedronGeometry(1, 0);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+        const obj = new THREE.Mesh(geometry, material);
+        scene.add(obj);
+
+        camera.position.z = 2.5;
+
+        // 動畫迴圈
+        const animate = function () {
+            requestAnimationFrame(animate);
+            obj.rotation.x += 0.01;
+            obj.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        };
+
+        animate();
+
+        // 響應式調整 (使用 ResizeObserver 監聽容器大小變化)
+        const resizeObserver = new ResizeObserver(() => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+        resizeObserver.observe(container);
+    };
+
+    // 啟動 Three.js
+    initThreeJS();
+
+
+    /* -----------------------------------------------------
      * [新增] Cursor Star Trail Effect (星光游標特效)
      * ----------------------------------------------------- */
     document.addEventListener('mousemove', function(e) {
@@ -364,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const katakana = '三 下 上 丈 丸 凡 久 也 乞 于 亡 口 土 士 夕 大 女 子 寸 小 山 川 工 己 已 巳 干 弓 才 之 亢 几 凡 刃 勺 叉';
     const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const nums = '0123456789';
-    const alphabet = katakana + latin + nums; // 修正錯誤：將 zh 改為 katakana
+    const alphabet = katakana + latin + nums; 
 
     const fontSize = 16;
     let columns = Math.floor(canvas.width / fontSize);
